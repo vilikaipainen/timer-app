@@ -132,6 +132,37 @@
 </div>
 
 <script>
+// ---- Pisteiden laskenta ----
+function calculatePoints(seconds) {
+    const intervalMinutes = 5;
+    const intervalSeconds = intervalMinutes * 60;
+    const intervals = Math.floor(seconds / intervalSeconds);
+
+    let points = 0;
+    let pointRate = 100;
+    const intervalsPerHour = 60 / intervalMinutes;
+
+    for (let i = 0; i < intervals; i++) {
+        points += pointRate / intervalsPerHour;
+
+        if ((i + 1) % intervalsPerHour === 0) {
+            pointRate *= 1.2;
+        }
+    }
+
+    return Math.round(points);
+}
+function awardPoints(totalSeconds) {
+    const earned = calculatePoints(totalSeconds);
+
+    const old = Number(localStorage.getItem("points") || 0);
+    const updated = old + earned;
+
+    localStorage.setItem("points", updated);
+
+    alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
+}
+
 const circleProgress = document.querySelector('circle.progress');
 const timeText = document.getElementById('timeText');
 const startBtn = document.getElementById('startBtn');
@@ -194,7 +225,11 @@ function stopTimer(){
   startBtn.disabled = true;
   pauseBtn.disabled = true;
   clearInterval(timerId);
+
+  // --- PISTEET LISÄTÄÄN TÄSSÄ ---
+  awardPoints(totalTime);
 }
+
 
 function resetTimer(){
   running = false;
