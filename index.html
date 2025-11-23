@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>Timer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* Yhtenäinen fontti & tyyli kaikille teksteille */
+    body, h1, button, .picker-item, .time-text {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      color: #333;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    body {
+      background: #f5f5f5;
+      text-align: center;
+      margin: 50px 0;
+      user-select: none;
+    }
+
+    h1 { margin-bottom: 30px; }
+
+    .timer-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: auto;
+    }
+
+    svg {
+      transform: rotate(-90deg);
+      width: 220px;
+      height: 220px;
+    }
+
+    circle.bg { fill: none; stroke: #e0e0e0; stroke-width: 12; }
+    circle.progress { fill: none; stroke: #4caf50; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.3s linear; }
+
+    .time-text {
+      font-size: 32px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    #startBtn { background-color: #1976d2; color: white; }
+    #pauseBtn { background-color: #fbc02d; color: black; }
+    #resetBtn { background-color: #eee; }
+
+    .picker-wrapper {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
+    }
+
+    .picker {
+      position: relative;
+      width: 70px;
+      height: 150px;
+      overflow: hidden;
+      border-radius: 15px;
+      background-color: #fff;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .picker-list {
+      position: absolute;
+      left: 0; right: 0; top: 0;
+      text-align: center;
+      transition: top 0.2s;
+    }
+
+    .picker-item {
+      height: 40px;
+      line-height: 40px;
+      font-size: 28px;
+    }
+
+    .picker-item.selected {
+      font-size: 38px;
+    }
+
+    .highlight-bar {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 40px;
+      border-top: 2px solid #4caf50;
+      border-bottom: 2px solid #4caf50;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Timer</h1>
+
+<div class="timer-container">
+  <svg>
+    <circle class="bg" r="94" cx="110" cy="110"/>
+    <circle class="progress" r="94" cx="110" cy="110" stroke-dasharray="591" stroke-dashoffset="0"/>
+  </svg>
+  <div class="time-text" id="timeText">00:01:00</div>
+</div>
+
+<div class="picker-wrapper">
+  <div class="picker" id="hoursPicker"></div>
+  <div class="picker" id="minutesPicker"></div>
+</div>
+
+<div>
+  <button id="startBtn">Start</button>
+  <button id="pauseBtn" disabled>Pause</button>
+  <button id="resetBtn">Reset</button>
+</div>
+
+<script>
+const circleProgress = document.querySelector('circle.progress');
+const timeText = document.getElementById('timeText');
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const hoursPicker = document.getElementById('hoursPicker');
+const minutesPicker = document.getElementById('minutesPicker');
+
+const hourRange = 13;   // 0–12
+const minuteRange = 60;
+
+const radius = 94;
+const circumference = 2 * Math.PI * radius;
+
+let selectedHour = 0;
+let selectedMinute = 1;
+let totalTime = selectedHour * 3600 + selectedMinute * 60;
+let timeLeft = totalTime;
+let running = false;
+let timerId = null;
+
+function formatTime(s){
+  const h = String(Math.floor(s/3600)).padStart(2,'0');
+  const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const sec = String(s%60).padStart(2,'0');
+  return `${h}:${m}:${sec}`;
+}
+
+function updateUI(){
+  timeText.textContent = formatTime(timeLeft);
+  const ratio = totalTime > 0 ? timeLeft / totalTime : 0;
+  circleProgress.style.strokeDashoffset = circumference * (1 - ratio);
+}
+
+function tick(){
+  if (timeLeft > 0) {
+    timeLeft--;
+    updateUI();
+  } else stopTimer();
+}
+
+function startTimer(){
+  if (running || timeLeft <= 0) return;
+  running = true;
+  startBtn.disabled = true;
+  pauseBtn.disabled = false;
+  timerId = setInterval(tick, 1000);
+}
+
+function pauseTimer(){
+  running = false;
+  startBtn.disabled = false;
+  pauseBtn.disabled = true;
+  clearInterval(timerId);
+}
+
+function stopTimer(){
+  running = false;
+  startBtn.disabled = true;
+  pauseBtn.disabled = true;
+  clearInterval(timerId);
+}
+
+function resetTimer(){
+  running = false;
+  clearInterval(timerId);
+  timeLeft = totalTime;
+  updateUI();
+  startBtn.disabled = false;
+  pauseBtn.disabled = true;
+}
+
+function buildPicker(picker, range){
+  picker.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'picker-list';
+  picker.appendChild(list);
+
+  for (let i = 0; i < range; i++){
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+    item.textContent = i.toString().padStart(2,'0');
+    list.appendChild(item);
+  }
+
+  const highlight = document.createElement('div');
+  highlight.className = 'highlight-bar';
+  picker.appendChild(highlight);
+}
+
+function updatePicker(picker, index){
+  const list = picker.querySelector('.picker-list');
+  const center = picker.offsetHeight/2 - 20;
+  list.style.top = center - index*40 + 'px';
+  picker.querySelectorAll('.picker-item').forEach((item,i)=>{
+    item.classList.toggle('selected', i === index);
+  });
+}
+
+function addPickerDrag(picker, maxRange, setValue){
+  let dragging = false, startY = 0, startTop = 0;
+  const list = picker.querySelector('.picker-list');
+
+  function move(y){
+    let delta = y - startY;
+    let newTop = startTop + delta;
+    const maxTop = picker.offsetHeight/2 - 20;
+    const minTop = -(maxRange-1)*40 + picker.offsetHeight/2 - 20;
+
+    if (newTop > maxTop) newTop = maxTop;
+    if (newTop < minTop) newTop = minTop;
+
+    list.style.top = newTop + 'px';
+    let index = Math.round((picker.offsetHeight/2 - 20 - newTop) / 40);
+    index = Math.max(0, Math.min(maxRange-1, index));
+    setValue(index);
+    updatePicker(picker, index);
+    updateTotalTime();
+  }
+
+  function down(e){
+    dragging = true;
+    startY = e.clientY || e.touches[0].clientY;
+    startTop = parseFloat(list.style.top) || 0;
+    e.preventDefault();
+  }
+  function moveEvent(e){ if (!dragging) return; move(e.clientY || e.touches[0].clientY); }
+  function up(){ dragging = false; }
+
+  picker.addEventListener('mousedown', down);
+  picker.addEventListener('touchstart', down, { passive:false });
+  window.addEventListener('mousemove', moveEvent);
+  window.addEventListener('touchmove', moveEvent, { passive:false });
+  window.addEventListener('mouseup', up);
+  window.addEventListener('touchend', up);
+}
+
+function updateTotalTime(){
+  totalTime = selectedHour*3600 + selectedMinute*60;
+  if (totalTime === 0) totalTime = 60;
+  timeLeft = totalTime;
+  updateUI();
+}
+
+buildPicker(hoursPicker, hourRange);
+buildPicker(minutesPicker, minuteRange);
+
+updatePicker(hoursPicker, selectedHour);
+updatePicker(minutesPicker, selectedMinute);
+
+addPickerDrag(hoursPicker, hourRange, i => selectedHour = i);
+addPickerDrag(minutesPicker, minuteRange, i => selectedMinute = i);
+
+updateUI();
+
+startBtn.addEventListener("click", startTimer);
+pauseBtn.addEventListener("click", pauseTimer);
+resetBtn.addEventListener("click", resetTimer);
+</script>
+
+</body>
+</html>
