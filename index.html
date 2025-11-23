@@ -119,6 +119,7 @@
   </svg>
   <div class="time-text" id="timeText">00:01:00</div>
 </div>
+<h2 id="pointsDisplay">Pisteet: 0</h2>
 
 <div class="picker-wrapper">
   <div class="picker" id="hoursPicker"></div>
@@ -168,6 +169,13 @@ const timeText = document.getElementById('timeText');
 const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
+// --- Pisteiden näyttö ---
+function updatePointsDisplay() {
+    const points = Number(localStorage.getItem("points") || 0);
+    document.getElementById("pointsDisplay").textContent = "Points: " + points;
+}
+
+updatePointsDisplay();
 
 const hoursPicker = document.getElementById('hoursPicker');
 const minutesPicker = document.getElementById('minutesPicker');
