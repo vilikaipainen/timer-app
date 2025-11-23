@@ -134,9 +134,14 @@
 
 <script>
 // --- Default points for new users ---
-if (localStorage.getItem("points") === null) {
+if (!localStorage.getItem("points")) {
     localStorage.setItem("points", 500);
 }
+
+// Päivitetään aina näkyviin
+document.getElementById("pointsDisplay").textContent =
+    "Pisteet: " + localStorage.getItem("points");
+
 
 // ---- Pisteiden laskenta ----
 function calculatePoints(seconds) {
