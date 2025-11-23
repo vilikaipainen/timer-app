@@ -133,6 +133,11 @@
 </div>
 
 <script>
+// --- Default points for new users ---
+if (localStorage.getItem("points") === null) {
+    localStorage.setItem("points", 500);
+}
+
 // ---- Pisteiden laskenta ----
 function calculatePoints(seconds) {
     const intervalMinutes = 5;
