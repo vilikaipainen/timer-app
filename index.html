@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Timer</title>
 
-  <!-- Poppins fontti -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
@@ -19,12 +18,12 @@
       background: #f5f5f5;
       text-align: center;
       margin: 0;
-      padding-top: 10px;   /* Siirretty alas */
+      padding-top: 10px;
       user-select: none;
     }
 
     h1 {
-      margin-top: 10px;   /* Siirretty alemmas */
+      margin-top: 10px;
       margin-bottom: 20px;
     }
 
@@ -32,7 +31,7 @@
       position: relative;
       width: 220px;
       height: 220px;
-      margin: 20px auto 10px auto;  /* siirretty alemmas */
+      margin: 20px auto 10px auto;
     }
 
     svg {
@@ -110,7 +109,6 @@
       transform: translateY(-50%);
       pointer-events: none;
     }
-
   </style>
 </head>
 
@@ -140,10 +138,18 @@
 </div>
 
 <script>
+// ---- SEND POINTS TO APPSMITH ----
+function sendToAppsmith(type, value) {
+    window.parent.postMessage({ type, value }, "*");
+}
+
 // ---- PISTEIDEN NÄYTTÖ ----
 function updatePointsDisplay() {
     const points = Number(localStorage.getItem("points") || 0);
     document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
+
+    // → Lähetä Appsmithiin kokonaispisteet
+    sendToAppsmith("totalPoints", points);
 }
 updatePointsDisplay();
 
@@ -159,6 +165,10 @@ function awardPoints(totalSeconds) {
     const updated = old + earned;
     localStorage.setItem("points", updated);
     updatePointsDisplay();
+
+    // → Lähetä ansaitut pisteet Appsmithiin
+    sendToAppsmith("timerPoints", earned);
+
     alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
 }
 
@@ -204,7 +214,7 @@ function startTimer() {
   if (ticking) return;
   ticking = true;
 
-  timerEnd = Date.now() + totalTime*1000;
+  timerEnd = Date.now() + totalTime * 1000;
   localStorage.setItem("timerEnd", timerEnd);
   localStorage.setItem("timerTotal", totalTime);
 
@@ -236,7 +246,7 @@ function stopTimer(award = false) {
   localStorage.removeItem("timerEnd");
 }
 
-// ---- RESTORE TIMER ----
+// ---- RESTORE ----
 window.addEventListener("load", () => {
   const savedEnd = Number(localStorage.getItem("timerEnd"));
   const savedTotal = Number(localStorage.getItem("timerTotal"));
@@ -341,7 +351,7 @@ updateUI();
 
 document.getElementById("startBtn").addEventListener("click", startTimer);
 document.getElementById("pauseBtn").addEventListener("click", pauseTimer);
-document.getElementById("resetBtn").addEventListener("click", resetTimer);
+document.getElementById("resetBtn").addEventListener("click", () => location.reload());
 </script>
 
 </body>
