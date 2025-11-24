@@ -6,7 +6,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
-    /* Yhtenäinen fontti & tyyli kaikille teksteille */
     body, h1, button, .picker-item, .time-text {
       font-family: 'Poppins', sans-serif;
       font-weight: 600;
@@ -119,6 +118,7 @@
   </svg>
   <div class="time-text" id="timeText">00:01:00</div>
 </div>
+
 <h2 id="pointsDisplay">Pisteet: 0</h2>
 
 <div class="picker-wrapper">
@@ -133,50 +133,41 @@
 </div>
 
 <script>
-// --- Default points for new users ---
-if (!localStorage.getItem("points")) {
-    localStorage.setItem("points", 500);
+// ---- PISTEIDEN NÄYTTÖ ----
+function updatePointsDisplay() {
+    const points = Number(localStorage.getItem("points") || 0);
+    document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
 }
+updatePointsDisplay();
 
-// Päivitetään aina näkyviin
-document.getElementById("pointsDisplay").textContent =
-    "Pisteet: " + localStorage.getItem("points");
-
-
-// ---- Pisteiden laskenta ----
+// ---- PISTEIDEN LASKENTA ----
 function calculatePoints(seconds) {
     const minutes = Math.floor(seconds / 60);
-    return minutes * 5;  // 5 pistettä per minuutti
+    return minutes * 5; // 5 pistettä per minuutti
 }
 
 function awardPoints(totalSeconds) {
     const earned = calculatePoints(totalSeconds);
-
     const old = Number(localStorage.getItem("points") || 0);
     const updated = old + earned;
 
     localStorage.setItem("points", updated);
+    updatePointsDisplay();
 
     alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
 }
 
+// ---- TIMER ----
 const circleProgress = document.querySelector('circle.progress');
 const timeText = document.getElementById('timeText');
 const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
-// --- Pisteiden näyttö ---
-function updatePointsDisplay() {
-    const points = Number(localStorage.getItem("points") || 0);
-    document.getElementById("pointsDisplay").textContent = "Points: " + points;
-}
-
-updatePointsDisplay();
 
 const hoursPicker = document.getElementById('hoursPicker');
 const minutesPicker = document.getElementById('minutesPicker');
 
-const hourRange = 13;   // 0–12
+const hourRange = 13;
 const minuteRange = 60;
 
 const radius = 94;
@@ -230,10 +221,8 @@ function stopTimer(){
   pauseBtn.disabled = true;
   clearInterval(timerId);
 
-  // --- PISTEET LISÄTÄÄN TÄSSÄ ---
   awardPoints(totalTime);
 }
-
 
 function resetTimer(){
   running = false;
@@ -244,6 +233,7 @@ function resetTimer(){
   pauseBtn.disabled = true;
 }
 
+// ---- PICKER ----
 function buildPicker(picker, range){
   picker.innerHTML = '';
   const list = document.createElement('div');
@@ -336,3 +326,4 @@ resetBtn.addEventListener("click", resetTimer);
 
 </body>
 </html>
+
