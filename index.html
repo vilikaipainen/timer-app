@@ -130,22 +130,19 @@
 <script>
 
 // ─────────────────────────────────────────────
-// Poistettu DEBUG kokonaan (funktio ja kutsut)
+// PISTELOGIIKKA
 // ─────────────────────────────────────────────
 
-// Viestit Appsmithiin
 function sendToAppsmith(type, value) {
     window.parent.postMessage({ type, value }, "*");
 }
 
-// Päivitä pisteet
 function updatePointsDisplay() {
     const points = Number(localStorage.getItem("points") || 0);
     document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
     sendToAppsmith("totalPoints", points);
 }
 
-// Laske pisteet
 function calculatePoints(seconds) {
     return Math.floor(seconds / 60) * 5;
 }
@@ -162,7 +159,10 @@ function awardPoints(totalSeconds) {
     sendToAppsmith("totalPoints", updated);
 }
 
+// ─────────────────────────────────────────────
 // TIMER
+// ─────────────────────────────────────────────
+
 const circleProgress = document.querySelector('circle.progress');
 const timeText = document.getElementById('timeText');
 
@@ -171,8 +171,10 @@ let selectedMinute = 1;
 
 let totalTime = selectedHour * 3600 + selectedMinute * 60;
 let timerEnd = null;
-let ticking = false;
 let timerInterval = null;
+
+let ticking = false;
+let isPaused = false;
 
 const radius = 94;
 const circumference = 2 * Math.PI * radius;
@@ -203,28 +205,47 @@ function tick() {
 function startTimer() {
   if (ticking) return;
   ticking = true;
+  isPaused = false;
 
   timerEnd = Date.now() + totalTime * 1000;
+
   localStorage.setItem("timerEnd", timerEnd);
   localStorage.setItem("timerTotal", totalTime);
+
+  pauseBtn.textContent = "Pause";
+  pauseBtn.disabled = false;
 
   timerInterval = setInterval(tick, 250);
 }
 
-function pauseTimer() {
-  ticking = false;
-  clearInterval(timerInterval);
+function togglePause() {
+  if (!ticking && !isPaused) return;
 
-  const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000));
-  totalTime = remaining;
-  timerEnd = null;
-  localStorage.removeItem("timerEnd");
+  if (!isPaused) {
+    clearInterval(timerInterval);
 
-  updateUI();
+    const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000));
+    totalTime = remaining;
+    timerEnd = null;
+    ticking = false;
+    isPaused = true;
+
+    pauseBtn.textContent = "Continue";
+  } else {
+    ticking = true;
+    isPaused = false;
+
+    timerEnd = Date.now() + totalTime * 1000;
+    localStorage.setItem("timerEnd", timerEnd);
+
+    pauseBtn.textContent = "Pause";
+    timerInterval = setInterval(tick, 250);
+  }
 }
 
 function stopTimer(award = false) {
   ticking = false;
+  isPaused = false;
   clearInterval(timerInterval);
 
   if (award) {
@@ -232,11 +253,14 @@ function stopTimer(award = false) {
     awardPoints(original);
   }
 
+  pauseBtn.textContent = "Pause";
+  pauseBtn.disabled = true;
+
   timerEnd = null;
   localStorage.removeItem("timerEnd");
 }
 
-// Restore
+// Restore running timer on reload
 window.addEventListener("load", () => {
   const savedEnd = Number(localStorage.getItem("timerEnd"));
   const savedTotal = Number(localStorage.getItem("timerTotal"));
@@ -246,11 +270,15 @@ window.addEventListener("load", () => {
     timerEnd = savedEnd;
     ticking = true;
     timerInterval = setInterval(tick, 250);
+    pauseBtn.disabled = false;
   }
   updateUI();
 });
 
+// ─────────────────────────────────────────────
 // PICKERS
+// ─────────────────────────────────────────────
+
 const hoursPicker = document.getElementById('hoursPicker');
 const minutesPicker = document.getElementById('minutesPicker');
 
@@ -339,8 +367,12 @@ addPickerDrag(minutesPicker, 60, i => selectedMinute = i);
 
 updateUI();
 
+// ─────────────────────────────────────────────
+// BUTTON EVENTS
+// ─────────────────────────────────────────────
+
 document.getElementById("startBtn").addEventListener("click", startTimer);
-document.getElementById("pauseBtn").addEventListener("click", pauseTimer);
+document.getElementById("pauseBtn").addEventListener("click", togglePause);
 document.getElementById("resetBtn").addEventListener("click", () => location.reload());
 
 </script>
