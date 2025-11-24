@@ -138,51 +138,64 @@
 </div>
 
 <script>
-// ---- SEND POINTS TO APPSMITH ----
-function sendToAppsmith(type, value) {
-    window.parent.postMessage({ type, value }, "*");
+
+// =======================================================
+// 🔥 DEBUG-FUNCTION
+// =======================================================
+function debug(msg, data = null) {
+    console.log("DEBUG:", msg, data);
+    alert("DEBUG: " + msg + (data !== null ? " → " + JSON.stringify(data) : ""));
 }
 
-// ---- PISTEIDEN NÄYTTÖ ----
+// =======================================================
+// 🔥 Lähetä viesti Appsmithiä kohti
+// =======================================================
+function sendToAppsmith(type, value) {
+    const payload = { type, value };
+
+    debug("Lähetetään Appsmithiin", payload);
+
+    window.parent.postMessage(payload, "*");
+}
+
+// =======================================================
+// PISTEIDEN NÄYTTÖ
+// =======================================================
 function updatePointsDisplay() {
     const points = Number(localStorage.getItem("points") || 0);
     document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
 
-    // → Lähetä Appsmithiin kokonaispisteet
     sendToAppsmith("totalPoints", points);
 }
-updatePointsDisplay();
 
-// ---- PISTEIDEN LASKENTA ----
+// =======================================================
+// PISTEIDEN LASKENTA
+// =======================================================
 function calculatePoints(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    return minutes * 5;
+    return Math.floor(seconds / 60) * 5;
 }
 
 function awardPoints(totalSeconds) {
     const earned = calculatePoints(totalSeconds);
-    const old = Number(localStorage.getItem("points") || 0);
-    const updated = old + earned;
+    const before = Number(localStorage.getItem("points") || 0);
+    const updated = before + earned;
+
+    debug("Timer päättyi — pisteet ansaittu", { earned, updated });
 
     localStorage.setItem("points", updated);
     updatePointsDisplay();
 
-    // 🔥 Lähetetään Appsmithiin
-    window.parent.postMessage(
-        { type: "timerPoints", value: earned },
-        "*"
-    );
-
-    window.parent.postMessage(
-        { type: "totalPoints", value: updated },
-        "*"
-    );
+    // 🔥 Lähetetään viestit Appsmithiin
+    sendToAppsmith("timerPoints", earned);
+    sendToAppsmith("totalPoints", updated);
 
     alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
 }
 
+// =======================================================
+// TIMER
+// =======================================================
 
-// ---- TIMER ----
 const circleProgress = document.querySelector('circle.progress');
 const timeText = document.getElementById('timeText');
 
@@ -215,7 +228,7 @@ function updateUI() {
 
 function tick() {
   updateUI();
-  const remaining = Math.max(0, Math.floor((timerEnd - Date.now())/1000));
+  const remaining = Math.floor((timerEnd - Date.now())/1000);
 
   if (remaining <= 0) stopTimer(true);
 }
@@ -227,6 +240,8 @@ function startTimer() {
   timerEnd = Date.now() + totalTime * 1000;
   localStorage.setItem("timerEnd", timerEnd);
   localStorage.setItem("timerTotal", totalTime);
+
+  debug("Timer käynnistetty", { totalTime });
 
   timerInterval = setInterval(tick, 250);
 }
@@ -240,6 +255,8 @@ function pauseTimer() {
   timerEnd = null;
   localStorage.removeItem("timerEnd");
 
+  debug("Timer tauotettu", { remaining });
+
   updateUI();
 }
 
@@ -247,19 +264,12 @@ function stopTimer(award = false) {
   ticking = false;
   clearInterval(timerInterval);
 
+  debug("Timer pysäytetty", { award });
+
   if (award) {
     const original = Number(localStorage.getItem("timerTotal") || totalTime);
 
-    // 🔥 Lähetetään Appsmithiin pisteet
-    window.parent.postMessage(
-        { type: "timerPoints", value: calculatePoints(original) },
-        "*"
-    );
-
-    window.parent.postMessage(
-        { type: "totalPoints", value: Number(localStorage.getItem("points")) },
-        "*"
-    );
+    debug("Palkitaan pisteet laskennan perusteella", { original });
 
     awardPoints(original);
   }
@@ -268,7 +278,9 @@ function stopTimer(award = false) {
   localStorage.removeItem("timerEnd");
 }
 
-// ---- RESTORE ----
+// =======================================================
+// RESTORE
+// =======================================================
 window.addEventListener("load", () => {
   const savedEnd = Number(localStorage.getItem("timerEnd"));
   const savedTotal = Number(localStorage.getItem("timerTotal"));
@@ -280,9 +292,14 @@ window.addEventListener("load", () => {
     timerInterval = setInterval(tick, 250);
   }
   updateUI();
+
+  debug("Timer sivu ladattu");
 });
 
-// ---- PICKER ----
+// =======================================================
+// PICKER
+// =======================================================
+
 const hoursPicker = document.getElementById('hoursPicker');
 const minutesPicker = document.getElementById('minutesPicker');
 
@@ -374,6 +391,7 @@ updateUI();
 document.getElementById("startBtn").addEventListener("click", startTimer);
 document.getElementById("pauseBtn").addEventListener("click", pauseTimer);
 document.getElementById("resetBtn").addEventListener("click", () => location.reload());
+
 </script>
 
 </body>
