@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Timer</title>
+
+  <!-- Poppins fontti -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
@@ -17,22 +19,20 @@
       background: #f5f5f5;
       text-align: center;
       margin: 0;
-      padding-top: 10px;  /* pienempi yläreuna */
+      padding-top: 10px;   /* Siirretty alas */
       user-select: none;
     }
 
-    /* ⬇️ OTSIKKO ALEMMAS */
-    h1 { 
-      margin-top: 30px;  
-      margin-bottom: 25px; 
+    h1 {
+      margin-top: 10px;   /* Siirretty alemmas */
+      margin-bottom: 20px;
     }
 
-    /* ⬇️ YMPYRÄ ALEMMAS */
     .timer-container {
       position: relative;
       width: 220px;
       height: 220px;
-      margin: 40px auto 0 auto; /* lisää iso ylä-margin tähän */
+      margin: 20px auto 10px auto;  /* siirretty alemmas */
     }
 
     svg {
@@ -69,7 +69,7 @@
       display: flex;
       justify-content: center;
       gap: 30px;
-      margin-top: 30px;
+      margin-top: 25px;
     }
 
     .picker {
@@ -86,7 +86,7 @@
       position: absolute;
       left: 0; right: 0; top: 0;
       text-align: center;
-      transition: top 0.2s;
+      transition: top 0.15s linear;
     }
 
     .picker-item {
@@ -110,6 +110,7 @@
       transform: translateY(-50%);
       pointer-events: none;
     }
+
   </style>
 </head>
 
@@ -139,10 +140,209 @@
 </div>
 
 <script>
-/* --- koko JavaScript-koodi sama kuin sinulla --- */
-/* --- ei tarvitse muuttaa mitään --- */
+// ---- PISTEIDEN NÄYTTÖ ----
+function updatePointsDisplay() {
+    const points = Number(localStorage.getItem("points") || 0);
+    document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
+}
+updatePointsDisplay();
+
+// ---- PISTEIDEN LASKENTA ----
+function calculatePoints(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    return minutes * 5;
+}
+
+function awardPoints(totalSeconds) {
+    const earned = calculatePoints(totalSeconds);
+    const old = Number(localStorage.getItem("points") || 0);
+    const updated = old + earned;
+    localStorage.setItem("points", updated);
+    updatePointsDisplay();
+    alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
+}
+
+// ---- TIMER ----
+const circleProgress = document.querySelector('circle.progress');
+const timeText = document.getElementById('timeText');
+
+let selectedHour = 0;
+let selectedMinute = 1;
+
+let totalTime = selectedHour * 3600 + selectedMinute * 60;
+let timerEnd = null;
+let ticking = false;
+let timerInterval = null;
+
+const radius = 94;
+const circumference = 2 * Math.PI * radius;
+
+function formatTime(s){
+  if (s < 0) s = 0;
+  const h = String(Math.floor(s/3600)).padStart(2,'0');
+  const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const sec = String(s%60).padStart(2,'0');
+  return `${h}:${m}:${sec}`;
+}
+
+function updateUI() {
+  let remaining = timerEnd ? Math.max(0, Math.floor((timerEnd - Date.now())/1000)) : totalTime;
+  timeText.textContent = formatTime(remaining);
+
+  const ratio = remaining / totalTime;
+  circleProgress.style.strokeDashoffset = circumference * (1 - ratio);
+}
+
+function tick() {
+  updateUI();
+  const remaining = Math.max(0, Math.floor((timerEnd - Date.now())/1000));
+
+  if (remaining <= 0) stopTimer(true);
+}
+
+function startTimer() {
+  if (ticking) return;
+  ticking = true;
+
+  timerEnd = Date.now() + totalTime*1000;
+  localStorage.setItem("timerEnd", timerEnd);
+  localStorage.setItem("timerTotal", totalTime);
+
+  timerInterval = setInterval(tick, 250);
+}
+
+function pauseTimer() {
+  ticking = false;
+  clearInterval(timerInterval);
+
+  const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000));
+  totalTime = remaining;
+  timerEnd = null;
+  localStorage.removeItem("timerEnd");
+
+  updateUI();
+}
+
+function stopTimer(award = false) {
+  ticking = false;
+  clearInterval(timerInterval);
+
+  if (award) {
+    const original = Number(localStorage.getItem("timerTotal") || totalTime);
+    awardPoints(original);
+  }
+
+  timerEnd = null;
+  localStorage.removeItem("timerEnd");
+}
+
+// ---- RESTORE TIMER ----
+window.addEventListener("load", () => {
+  const savedEnd = Number(localStorage.getItem("timerEnd"));
+  const savedTotal = Number(localStorage.getItem("timerTotal"));
+
+  if (savedEnd && Date.now() < savedEnd) {
+    totalTime = savedTotal;
+    timerEnd = savedEnd;
+    ticking = true;
+    timerInterval = setInterval(tick, 250);
+  }
+  updateUI();
+});
+
+// ---- PICKER ----
+const hoursPicker = document.getElementById('hoursPicker');
+const minutesPicker = document.getElementById('minutesPicker');
+
+function buildPicker(picker, range){
+  picker.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'picker-list';
+  picker.appendChild(list);
+
+  for (let i = 0; i < range; i++){
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+    item.textContent = i.toString().padStart(2,'0');
+    list.appendChild(item);
+  }
+
+  const highlight = document.createElement('div');
+  highlight.className = 'highlight-bar';
+  picker.appendChild(highlight);
+}
+
+function updatePicker(picker, index){
+  const list = picker.querySelector('.picker-list');
+  const center = picker.offsetHeight/2 - 20;
+  list.style.top = center - index*40 + 'px';
+
+  picker.querySelectorAll('.picker-item').forEach((item,i)=> {
+    item.classList.toggle('selected', i === index);
+  });
+}
+
+function addPickerDrag(picker, maxRange, setValue){
+  let dragging = false, startY = 0, startTop = 0;
+  const list = picker.querySelector('.picker-list');
+
+  function move(y){
+    let delta = y - startY;
+    let newTop = startTop + delta;
+
+    const maxTop = picker.offsetHeight/2 - 20;
+    const minTop = -(maxRange-1)*40 + picker.offsetHeight/2 - 20;
+
+    if (newTop > maxTop) newTop = maxTop;
+    if (newTop < minTop) newTop = minTop;
+
+    list.style.top = newTop + 'px';
+
+    let index = Math.round((picker.offsetHeight/2 - 20 - newTop) / 40);
+    index = Math.max(0, Math.min(maxRange-1, index));
+
+    setValue(index);
+    updatePicker(picker, index);
+
+    totalTime = selectedHour*3600 + selectedMinute*60;
+    updateUI();
+  }
+
+  function down(e){
+    dragging = true;
+    startY = e.clientY || e.touches[0].clientY;
+    startTop = parseFloat(list.style.top) || 0;
+    e.preventDefault();
+  }
+
+  function moveEvent(e){ if (dragging) move(e.clientY || e.touches[0].clientY); }
+  function up(){ dragging = false; }
+
+  picker.addEventListener('mousedown', down);
+  picker.addEventListener('touchstart', down, { passive:false });
+  window.addEventListener('mousemove', moveEvent);
+  window.addEventListener('touchmove', moveEvent, { passive:false });
+  window.addEventListener('mouseup', up);
+  window.addEventListener('touchend', up);
+}
+
+buildPicker(hoursPicker, 13);
+buildPicker(minutesPicker, 60);
+
+window.addEventListener("load", () => {
+    updatePicker(hoursPicker, selectedHour);
+    updatePicker(minutesPicker, selectedMinute);
+});
+
+addPickerDrag(hoursPicker, 13, i => selectedHour = i);
+addPickerDrag(minutesPicker, 60, i => selectedMinute = i);
+
+updateUI();
+
+document.getElementById("startBtn").addEventListener("click", startTimer);
+document.getElementById("pauseBtn").addEventListener("click", pauseTimer);
+document.getElementById("resetBtn").addEventListener("click", resetTimer);
 </script>
 
 </body>
 </html>
-
