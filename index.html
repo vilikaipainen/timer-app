@@ -145,21 +145,9 @@ document.getElementById("pointsDisplay").textContent =
 
 // ---- Pisteiden laskenta ----
 function calculatePoints(seconds) {
-    const intervalMinutes = 5;
-    const intervalSeconds = intervalMinutes * 60;
-    const intervals = Math.floor(seconds / intervalSeconds);
-
-    let points = 0;
-    let pointRate = 100;
-    const intervalsPerHour = 60 / intervalMinutes;
-
-    for (let i = 0; i < intervals; i++) {
-        points += pointRate / intervalsPerHour;
-
-        if ((i + 1) % intervalsPerHour === 0) {
-            pointRate *= 1.2;
-        }
-    }
+    const minutes = Math.floor(seconds / 60);
+    return minutes * 5;  // 5 pistettä per minuutti
+}
 
     return Math.round(points);
 }
