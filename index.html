@@ -270,6 +270,8 @@ function buildPicker(picker, range){
     list.appendChild(item);
   }
 
+  list.style.top = (picker.offsetHeight/2 - 20) + 'px';
+
   const highlight = document.createElement('div');
   highlight.className = 'highlight-bar';
   picker.appendChild(highlight);
