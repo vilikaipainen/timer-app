@@ -22,10 +22,7 @@
       user-select: none;
     }
 
-    h1 {
-      margin-top: 10px;
-      margin-bottom: 20px;
-    }
+    h1 { margin-top: 10px; margin-bottom: 20px; }
 
     .timer-container {
       position: relative;
@@ -36,8 +33,7 @@
 
     svg {
       transform: rotate(-90deg);
-      width: 220px;
-      height: 220px;
+      width: 220px; height: 220px;
     }
 
     circle.bg { fill: none; stroke: #e0e0e0; stroke-width: 12; }
@@ -46,8 +42,7 @@
     .time-text {
       font-size: 32px;
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
     }
 
@@ -89,20 +84,15 @@
     }
 
     .picker-item {
-      height: 40px;
-      line-height: 40px;
+      height: 40px; line-height: 40px;
       font-size: 28px;
     }
 
-    .picker-item.selected {
-      font-size: 38px;
-    }
+    .picker-item.selected { font-size: 38px; }
 
     .highlight-bar {
       position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
+      top: 50%; left: 0; right: 0;
       height: 40px;
       border-top: 2px solid #4caf50;
       border-bottom: 2px solid #4caf50;
@@ -139,38 +129,23 @@
 
 <script>
 
-// =======================================================
-// 🔥 DEBUG-FUNCTION
-// =======================================================
-function debug(msg, data = null) {
-    console.log("DEBUG:", msg, data);
-    alert("DEBUG: " + msg + (data !== null ? " → " + JSON.stringify(data) : ""));
-}
+// ─────────────────────────────────────────────
+// Poistettu DEBUG kokonaan (funktio ja kutsut)
+// ─────────────────────────────────────────────
 
-// =======================================================
-// 🔥 Lähetä viesti Appsmithiä kohti
-// =======================================================
+// Viestit Appsmithiin
 function sendToAppsmith(type, value) {
-    const payload = { type, value };
-
-    debug("Lähetetään Appsmithiin", payload);
-
-    window.parent.postMessage(payload, "*");
+    window.parent.postMessage({ type, value }, "*");
 }
 
-// =======================================================
-// PISTEIDEN NÄYTTÖ
-// =======================================================
+// Päivitä pisteet
 function updatePointsDisplay() {
     const points = Number(localStorage.getItem("points") || 0);
     document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
-
     sendToAppsmith("totalPoints", points);
 }
 
-// =======================================================
-// PISTEIDEN LASKENTA
-// =======================================================
+// Laske pisteet
 function calculatePoints(seconds) {
     return Math.floor(seconds / 60) * 5;
 }
@@ -180,22 +155,14 @@ function awardPoints(totalSeconds) {
     const before = Number(localStorage.getItem("points") || 0);
     const updated = before + earned;
 
-    debug("Timer päättyi — pisteet ansaittu", { earned, updated });
-
     localStorage.setItem("points", updated);
     updatePointsDisplay();
 
-    // 🔥 Lähetetään viestit Appsmithiin
     sendToAppsmith("timerPoints", earned);
     sendToAppsmith("totalPoints", updated);
-
-    alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
 }
 
-// =======================================================
 // TIMER
-// =======================================================
-
 const circleProgress = document.querySelector('circle.progress');
 const timeText = document.getElementById('timeText');
 
@@ -241,8 +208,6 @@ function startTimer() {
   localStorage.setItem("timerEnd", timerEnd);
   localStorage.setItem("timerTotal", totalTime);
 
-  debug("Timer käynnistetty", { totalTime });
-
   timerInterval = setInterval(tick, 250);
 }
 
@@ -255,8 +220,6 @@ function pauseTimer() {
   timerEnd = null;
   localStorage.removeItem("timerEnd");
 
-  debug("Timer tauotettu", { remaining });
-
   updateUI();
 }
 
@@ -264,13 +227,8 @@ function stopTimer(award = false) {
   ticking = false;
   clearInterval(timerInterval);
 
-  debug("Timer pysäytetty", { award });
-
   if (award) {
     const original = Number(localStorage.getItem("timerTotal") || totalTime);
-
-    debug("Palkitaan pisteet laskennan perusteella", { original });
-
     awardPoints(original);
   }
 
@@ -278,9 +236,7 @@ function stopTimer(award = false) {
   localStorage.removeItem("timerEnd");
 }
 
-// =======================================================
-// RESTORE
-// =======================================================
+// Restore
 window.addEventListener("load", () => {
   const savedEnd = Number(localStorage.getItem("timerEnd"));
   const savedTotal = Number(localStorage.getItem("timerTotal"));
@@ -292,14 +248,9 @@ window.addEventListener("load", () => {
     timerInterval = setInterval(tick, 250);
   }
   updateUI();
-
-  debug("Timer sivu ladattu");
 });
 
-// =======================================================
-// PICKER
-// =======================================================
-
+// PICKERS
 const hoursPicker = document.getElementById('hoursPicker');
 const minutesPicker = document.getElementById('minutesPicker');
 
