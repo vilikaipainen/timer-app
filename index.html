@@ -163,14 +163,24 @@ function awardPoints(totalSeconds) {
     const earned = calculatePoints(totalSeconds);
     const old = Number(localStorage.getItem("points") || 0);
     const updated = old + earned;
+
     localStorage.setItem("points", updated);
     updatePointsDisplay();
 
-    // → Lähetä ansaitut pisteet Appsmithiin
-    sendToAppsmith("timerPoints", earned);
+    // 🔥 Lähetetään Appsmithiin
+    window.parent.postMessage(
+        { type: "timerPoints", value: earned },
+        "*"
+    );
+
+    window.parent.postMessage(
+        { type: "totalPoints", value: updated },
+        "*"
+    );
 
     alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
 }
+
 
 // ---- TIMER ----
 const circleProgress = document.querySelector('circle.progress');
