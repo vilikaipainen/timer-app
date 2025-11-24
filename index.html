@@ -143,97 +143,128 @@ updatePointsDisplay();
 // ---- PISTEIDEN LASKENTA ----
 function calculatePoints(seconds) {
     const minutes = Math.floor(seconds / 60);
-    return minutes * 5; // 5 pistettä per minuutti
+    return minutes * 5;
 }
 
 function awardPoints(totalSeconds) {
     const earned = calculatePoints(totalSeconds);
     const old = Number(localStorage.getItem("points") || 0);
     const updated = old + earned;
-
     localStorage.setItem("points", updated);
     updatePointsDisplay();
-
     alert(`Timer finished!\nEarned: ${earned} points\nTotal: ${updated} points`);
 }
 
-// ---- TIMER ----
+// ---- TIMER (TOIMII NÄYTÖN SAMMUESSA) ----
 const circleProgress = document.querySelector('circle.progress');
 const timeText = document.getElementById('timeText');
-const startBtn = document.getElementById('startBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const resetBtn = document.getElementById('resetBtn');
 
-const hoursPicker = document.getElementById('hoursPicker');
-const minutesPicker = document.getElementById('minutesPicker');
+let selectedHour = 0;
+let selectedMinute = 1;
 
-const hourRange = 13;
-const minuteRange = 60;
+let totalTime = selectedHour * 3600 + selectedMinute * 60;
+let timerEnd = null;
+let ticking = false;
+let timerInterval = null;
 
 const radius = 94;
 const circumference = 2 * Math.PI * radius;
 
-let selectedHour = 0;
-let selectedMinute = 1;
-let totalTime = selectedHour * 3600 + selectedMinute * 60;
-let timeLeft = totalTime;
-let running = false;
-let timerId = null;
-
 function formatTime(s){
+  if (s < 0) s = 0;
   const h = String(Math.floor(s/3600)).padStart(2,'0');
   const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
   const sec = String(s%60).padStart(2,'0');
   return `${h}:${m}:${sec}`;
 }
 
-function updateUI(){
-  timeText.textContent = formatTime(timeLeft);
-  const ratio = totalTime > 0 ? timeLeft / totalTime : 0;
+function updateUI() {
+  let remaining = timerEnd ? Math.max(0, Math.floor((timerEnd - Date.now())/1000)) : totalTime;
+  timeText.textContent = formatTime(remaining);
+
+  const ratio = remaining / totalTime;
   circleProgress.style.strokeDashoffset = circumference * (1 - ratio);
 }
 
-function tick(){
-  if (timeLeft > 0) {
-    timeLeft--;
-    updateUI();
-  } else stopTimer();
-}
-
-function startTimer(){
-  if (running || timeLeft <= 0) return;
-  running = true;
-  startBtn.disabled = true;
-  pauseBtn.disabled = false;
-  timerId = setInterval(tick, 1000);
-}
-
-function pauseTimer(){
-  running = false;
-  startBtn.disabled = false;
-  pauseBtn.disabled = true;
-  clearInterval(timerId);
-}
-
-function stopTimer(){
-  running = false;
-  startBtn.disabled = true;
-  pauseBtn.disabled = true;
-  clearInterval(timerId);
-
-  awardPoints(totalTime);
-}
-
-function resetTimer(){
-  running = false;
-  clearInterval(timerId);
-  timeLeft = totalTime;
+function tick() {
   updateUI();
-  startBtn.disabled = false;
-  pauseBtn.disabled = true;
+  const remaining = Math.max(0, Math.floor((timerEnd - Date.now())/1000));
+
+  if (remaining <= 0) {
+    stopTimer(true);
+  }
 }
 
-// ---- PICKER ----
+function startTimer() {
+  if (ticking) return;
+  ticking = true;
+
+  timerEnd = Date.now() + totalTime*1000;
+  localStorage.setItem("timerEnd", timerEnd);
+  localStorage.setItem("timerTotal", totalTime);
+
+  timerInterval = setInterval(tick, 250);
+}
+
+function pauseTimer() {
+  ticking = false;
+  clearInterval(timerInterval);
+
+  const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000));
+
+  totalTime = remaining;
+  timerEnd = null;
+  localStorage.removeItem("timerEnd");
+
+  updateUI();
+}
+
+function stopTimer(award = false) {
+  ticking = false;
+  clearInterval(timerInterval);
+
+  if (award) {
+    const original = Number(localStorage.getItem("timerTotal") || totalTime);
+    awardPoints(original);
+  }
+
+  timerEnd = null;
+  localStorage.removeItem("timerEnd");
+}
+
+// ---- RESTORE TIMER IF USER RETURNS ----
+window.addEventListener("load", () => {
+  const savedEnd = Number(localStorage.getItem("timerEnd"));
+  const savedTotal = Number(localStorage.getItem("timerTotal"));
+
+  if (savedEnd && Date.now() < savedEnd) {
+    totalTime = savedTotal;
+    timerEnd = savedEnd;
+    ticking = true;
+    timerInterval = setInterval(tick, 250);
+  }
+  updateUI();
+});
+
+// ---- RESET ----
+function resetTimer() {
+  ticking = false;
+  clearInterval(timerInterval);
+  timerEnd = null;
+  localStorage.removeItem("timerEnd");
+
+  totalTime = selectedHour*3600 + selectedMinute*60;
+  if (totalTime === 0) totalTime = 60;
+
+  updateUI();
+}
+
+// ---- PICKER (SAMA KUIN ENNEN) ----
+const hoursPicker = document.getElementById('hoursPicker');
+const minutesPicker = document.getElementById('minutesPicker');
+const hourRange = 13;
+const minuteRange = 60;
+
 function buildPicker(picker, range){
   picker.innerHTML = '';
   const list = document.createElement('div');
@@ -258,7 +289,7 @@ function updatePicker(picker, index){
   const list = picker.querySelector('.picker-list');
   const center = picker.offsetHeight/2 - 20;
   list.style.top = center - index*40 + 'px';
-  picker.querySelectorAll('.picker-item').forEach((item,i)=>{
+  picker.querySelectorAll('.picker-item').forEach((item,i)=> {
     item.classList.toggle('selected', i === index);
   });
 }
@@ -281,7 +312,9 @@ function addPickerDrag(picker, maxRange, setValue){
     index = Math.max(0, Math.min(maxRange-1, index));
     setValue(index);
     updatePicker(picker, index);
-    updateTotalTime();
+
+    totalTime = selectedHour*3600 + selectedMinute*60;
+    updateUI();
   }
 
   function down(e){
@@ -290,6 +323,7 @@ function addPickerDrag(picker, maxRange, setValue){
     startTop = parseFloat(list.style.top) || 0;
     e.preventDefault();
   }
+
   function moveEvent(e){ if (!dragging) return; move(e.clientY || e.touches[0].clientY); }
   function up(){ dragging = false; }
 
@@ -299,13 +333,6 @@ function addPickerDrag(picker, maxRange, setValue){
   window.addEventListener('touchmove', moveEvent, { passive:false });
   window.addEventListener('mouseup', up);
   window.addEventListener('touchend', up);
-}
-
-function updateTotalTime(){
-  totalTime = selectedHour*3600 + selectedMinute*60;
-  if (totalTime === 0) totalTime = 60;
-  timeLeft = totalTime;
-  updateUI();
 }
 
 buildPicker(hoursPicker, hourRange);
@@ -319,11 +346,10 @@ addPickerDrag(minutesPicker, minuteRange, i => selectedMinute = i);
 
 updateUI();
 
-startBtn.addEventListener("click", startTimer);
-pauseBtn.addEventListener("click", pauseTimer);
-resetBtn.addEventListener("click", resetTimer);
+document.getElementById("startBtn").addEventListener("click", startTimer);
+document.getElementById("pauseBtn").addEventListener("click", pauseTimer);
+document.getElementById("resetBtn").addEventListener("click", resetTimer);
 </script>
 
 </body>
 </html>
-
