@@ -249,6 +249,18 @@ function stopTimer(award = false) {
 
   if (award) {
     const original = Number(localStorage.getItem("timerTotal") || totalTime);
+
+    // 🔥 Lähetetään Appsmithiin pisteet
+    window.parent.postMessage(
+        { type: "timerPoints", value: calculatePoints(original) },
+        "*"
+    );
+
+    window.parent.postMessage(
+        { type: "totalPoints", value: Number(localStorage.getItem("points")) },
+        "*"
+    );
+
     awardPoints(original);
   }
 
