@@ -139,7 +139,7 @@ function sendToAppsmith(type, value) {
 
 function updatePointsDisplay() {
     const points = Number(localStorage.getItem("points") || 0);
-    document.getElementById("pointsDisplay").textContent = "Pisteet: " + points;
+    document.getElementById("pointsDisplay").textContent = "Points: " + points;
     sendToAppsmith("totalPoints", points);
 }
 
@@ -260,7 +260,41 @@ function stopTimer(award = false) {
   localStorage.removeItem("timerEnd");
 }
 
-// Restore running timer on reload
+// ─────────────────────────────────────────────
+// RESET (UUSI KORJATTU)
+// ─────────────────────────────────────────────
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+
+    clearInterval(timerInterval);
+    ticking = false;
+    isPaused = false;
+
+    // Nollaa pickerin oletusaika
+    selectedHour = 0;
+    selectedMinute = 1; // voit vaihtaa 0 jos haluat 00:00:00
+
+    totalTime = selectedHour * 3600 + selectedMinute * 60;
+
+    // Poista timerin localStorage-tiedot
+    localStorage.removeItem("timerEnd");
+    localStorage.removeItem("timerTotal");
+
+    // Päivitä pickerit ja UI
+    updatePicker(hoursPicker, selectedHour);
+    updatePicker(minutesPicker, selectedMinute);
+
+    circleProgress.style.strokeDashoffset = 0;
+    timeText.textContent = formatTime(totalTime);
+
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = "Pause";
+});
+
+// ─────────────────────────────────────────────
+// Lataa aikaisempi ajastin jos on
+// ─────────────────────────────────────────────
+
 window.addEventListener("load", () => {
   const savedEnd = Number(localStorage.getItem("timerEnd"));
   const savedTotal = Number(localStorage.getItem("timerTotal"));
@@ -367,15 +401,8 @@ addPickerDrag(minutesPicker, 60, i => selectedMinute = i);
 
 updateUI();
 
-// ─────────────────────────────────────────────
-// BUTTON EVENTS
-// ─────────────────────────────────────────────
-
-document.getElementById("startBtn").addEventListener("click", startTimer);
-document.getElementById("pauseBtn").addEventListener("click", togglePause);
-document.getElementById("resetBtn").addEventListener("click", () => location.reload());
-
 </script>
 
 </body>
 </html>
+
