@@ -130,6 +130,14 @@
 <script>
 
 // ─────────────────────────────────────────────
+// ELEMENTIT
+// ─────────────────────────────────────────────
+
+const pauseBtn = document.getElementById("pauseBtn");
+const startBtn = document.getElementById("startBtn");
+
+
+// ─────────────────────────────────────────────
 // PISTELOGIIKKA
 // ─────────────────────────────────────────────
 
@@ -204,6 +212,7 @@ function tick() {
 
 function startTimer() {
   if (ticking) return;
+
   ticking = true;
   isPaused = false;
 
@@ -261,7 +270,7 @@ function stopTimer(award = false) {
 }
 
 // ─────────────────────────────────────────────
-// RESET (UUSI KORJATTU)
+// RESET — KORJATTU
 // ─────────────────────────────────────────────
 
 document.getElementById("resetBtn").addEventListener("click", () => {
@@ -270,17 +279,14 @@ document.getElementById("resetBtn").addEventListener("click", () => {
     ticking = false;
     isPaused = false;
 
-    // Nollaa pickerin oletusaika
     selectedHour = 0;
-    selectedMinute = 1; // voit vaihtaa 0 jos haluat 00:00:00
+    selectedMinute = 1;
 
     totalTime = selectedHour * 3600 + selectedMinute * 60;
 
-    // Poista timerin localStorage-tiedot
     localStorage.removeItem("timerEnd");
     localStorage.removeItem("timerTotal");
 
-    // Päivitä pickerit ja UI
     updatePicker(hoursPicker, selectedHour);
     updatePicker(minutesPicker, selectedMinute);
 
@@ -292,10 +298,12 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 });
 
 // ─────────────────────────────────────────────
-// Lataa aikaisempi ajastin jos on
+// LATAA ALOITTAESSA MAHDOLLINEN KESKEN OLEVA AJASTIN
 // ─────────────────────────────────────────────
 
 window.addEventListener("load", () => {
+  updatePointsDisplay();
+
   const savedEnd = Number(localStorage.getItem("timerEnd"));
   const savedTotal = Number(localStorage.getItem("timerTotal"));
 
@@ -306,11 +314,12 @@ window.addEventListener("load", () => {
     timerInterval = setInterval(tick, 250);
     pauseBtn.disabled = false;
   }
+
   updateUI();
 });
 
 // ─────────────────────────────────────────────
-// PICKERS
+// PICKERIT
 // ─────────────────────────────────────────────
 
 const hoursPicker = document.getElementById('hoursPicker');
