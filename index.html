@@ -133,22 +133,19 @@
 // ELEMENTIT
 // ─────────────────────────────────────────────
 
-const pauseBtn = document.getElementById("pauseBtn");
 const startBtn = document.getElementById("startBtn");
-
+const pauseBtn = document.getElementById("pauseBtn");
+const resetBtn = document.getElementById("resetBtn");
+const timeText = document.getElementById("timeText");
+const circleProgress = document.querySelector("circle.progress");
 
 // ─────────────────────────────────────────────
 // PISTELOGIIKKA
 // ─────────────────────────────────────────────
 
-function sendToAppsmith(type, value) {
-    window.parent.postMessage({ type, value }, "*");
-}
-
 function updatePointsDisplay() {
     const points = Number(localStorage.getItem("points") || 0);
     document.getElementById("pointsDisplay").textContent = "Points: " + points;
-    sendToAppsmith("totalPoints", points);
 }
 
 function calculatePoints(seconds) {
@@ -159,20 +156,13 @@ function awardPoints(totalSeconds) {
     const earned = calculatePoints(totalSeconds);
     const before = Number(localStorage.getItem("points") || 0);
     const updated = before + earned;
-
     localStorage.setItem("points", updated);
     updatePointsDisplay();
-
-    sendToAppsmith("timerPoints", earned);
-    sendToAppsmith("totalPoints", updated);
 }
 
 // ─────────────────────────────────────────────
-// TIMER
+// TIMER-VARIABLET
 // ─────────────────────────────────────────────
-
-const circleProgress = document.querySelector('circle.progress');
-const timeText = document.getElementById('timeText');
 
 let selectedHour = 0;
 let selectedMinute = 1;
@@ -180,108 +170,125 @@ let selectedMinute = 1;
 let totalTime = selectedHour * 3600 + selectedMinute * 60;
 let timerEnd = null;
 let timerInterval = null;
-
 let ticking = false;
 let isPaused = false;
 
 const radius = 94;
 const circumference = 2 * Math.PI * radius;
 
-function formatTime(s){
-  if (s < 0) s = 0;
-  const h = String(Math.floor(s/3600)).padStart(2,'0');
-  const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
-  const sec = String(s%60).padStart(2,'0');
-  return `${h}:${m}:${sec}`;
+// ─────────────────────────────────────────────
+// FUNKTIOT
+// ─────────────────────────────────────────────
+
+function formatTime(seconds) {
+    seconds = Math.max(0, seconds);
+    const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
+    return `${h}:${m}:${s}`;
 }
 
 function updateUI() {
-  let remaining = timerEnd ? Math.max(0, Math.floor((timerEnd - Date.now())/1000)) : totalTime;
-  timeText.textContent = formatTime(remaining);
+    let remaining = timerEnd
+        ? Math.max(0, Math.floor((timerEnd - Date.now()) / 1000))
+        : totalTime;
 
-  const ratio = remaining / totalTime;
-  circleProgress.style.strokeDashoffset = circumference * (1 - ratio);
+    timeText.textContent = formatTime(remaining);
+
+    const ratio = remaining / totalTime;
+    circleProgress.style.strokeDashoffset = circumference * (1 - ratio);
 }
 
 function tick() {
-  updateUI();
-  const remaining = Math.floor((timerEnd - Date.now())/1000);
-
-  if (remaining <= 0) stopTimer(true);
+    updateUI();
+    if (Math.floor((timerEnd - Date.now()) / 1000) <= 0) {
+        stopTimer(true);
+    }
 }
+
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
 
 function startTimer() {
-  if (ticking) return;
+    if (ticking) return;
 
-  ticking = true;
-  isPaused = false;
-
-  timerEnd = Date.now() + totalTime * 1000;
-
-  localStorage.setItem("timerEnd", timerEnd);
-  localStorage.setItem("timerTotal", totalTime);
-
-  pauseBtn.textContent = "Pause";
-  pauseBtn.disabled = false;
-
-  timerInterval = setInterval(tick, 250);
-}
-
-function togglePause() {
-  if (!ticking && !isPaused) return;
-
-  if (!isPaused) {
-    clearInterval(timerInterval);
-
-    const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000));
-    totalTime = remaining;
-    timerEnd = null;
-    ticking = false;
-    isPaused = true;
-
-    pauseBtn.textContent = "Continue";
-  } else {
     ticking = true;
     isPaused = false;
 
     timerEnd = Date.now() + totalTime * 1000;
-    localStorage.setItem("timerEnd", timerEnd);
 
+    localStorage.setItem("timerEnd", timerEnd);
+    localStorage.setItem("timerTotal", totalTime);
+
+    pauseBtn.disabled = false;
     pauseBtn.textContent = "Pause";
+
     timerInterval = setInterval(tick, 250);
-  }
 }
+
+// ─────────────────────────────────────────────
+// PAUSE
+// ─────────────────────────────────────────────
+
+function togglePause() {
+    if (!ticking && !isPaused) return;
+
+    if (!isPaused) {
+        clearInterval(timerInterval);
+
+        const remaining = Math.max(0, Math.floor((timerEnd - Date.now()) / 1000));
+        totalTime = remaining;
+
+        ticking = false;
+        isPaused = true;
+
+        pauseBtn.textContent = "Continue";
+    } else {
+        ticking = true;
+        isPaused = false;
+
+        timerEnd = Date.now() + totalTime * 1000;
+        localStorage.setItem("timerEnd", timerEnd);
+
+        pauseBtn.textContent = "Pause";
+
+        timerInterval = setInterval(tick, 250);
+    }
+}
+
+// ─────────────────────────────────────────────
+// STOP / AWARD
+// ─────────────────────────────────────────────
 
 function stopTimer(award = false) {
-  ticking = false;
-  isPaused = false;
-  clearInterval(timerInterval);
+    ticking = false;
+    isPaused = false;
+    clearInterval(timerInterval);
 
-  if (award) {
-    const original = Number(localStorage.getItem("timerTotal") || totalTime);
-    awardPoints(original);
-  }
+    if (award) {
+        const original = Number(localStorage.getItem("timerTotal") || totalTime);
+        awardPoints(original);
+    }
 
-  pauseBtn.textContent = "Pause";
-  pauseBtn.disabled = true;
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = "Pause";
 
-  timerEnd = null;
-  localStorage.removeItem("timerEnd");
+    timerEnd = null;
+    localStorage.removeItem("timerEnd");
 }
 
 // ─────────────────────────────────────────────
-// RESET — KORJATTU
+// RESET
 // ─────────────────────────────────────────────
 
-document.getElementById("resetBtn").addEventListener("click", () => {
-
+function resetTimer() {
     clearInterval(timerInterval);
     ticking = false;
     isPaused = false;
 
     selectedHour = 0;
     selectedMinute = 1;
-
     totalTime = selectedHour * 3600 + selectedMinute * 60;
 
     localStorage.removeItem("timerEnd");
@@ -295,118 +302,133 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 
     pauseBtn.disabled = true;
     pauseBtn.textContent = "Pause";
-});
+}
 
 // ─────────────────────────────────────────────
-// LATAA ALOITTAESSA MAHDOLLINEN KESKEN OLEVA AJASTIN
+// NAPPITAPAHTUMAT — TÄMÄ OLI SE PUUTTUVA KOHTA!
+// ─────────────────────────────────────────────
+
+startBtn.addEventListener("click", startTimer);
+pauseBtn.addEventListener("click", togglePause);
+resetBtn.addEventListener("click", resetTimer);
+
+// ─────────────────────────────────────────────
+// LATAA KESKEN OLEVA AJASTIN
 // ─────────────────────────────────────────────
 
 window.addEventListener("load", () => {
-  updatePointsDisplay();
+    updatePointsDisplay();
 
-  const savedEnd = Number(localStorage.getItem("timerEnd"));
-  const savedTotal = Number(localStorage.getItem("timerTotal"));
+    const savedEnd = Number(localStorage.getItem("timerEnd"));
+    const savedTotal = Number(localStorage.getItem("timerTotal"));
 
-  if (savedEnd && Date.now() < savedEnd) {
-    totalTime = savedTotal;
-    timerEnd = savedEnd;
-    ticking = true;
-    timerInterval = setInterval(tick, 250);
-    pauseBtn.disabled = false;
-  }
+    if (savedEnd && Date.now() < savedEnd) {
+        totalTime = savedTotal;
+        timerEnd = savedEnd;
+        ticking = true;
+        timerInterval = setInterval(tick, 250);
+        pauseBtn.disabled = false;
+    }
 
-  updateUI();
+    updateUI();
 });
 
 // ─────────────────────────────────────────────
 // PICKERIT
 // ─────────────────────────────────────────────
 
-const hoursPicker = document.getElementById('hoursPicker');
-const minutesPicker = document.getElementById('minutesPicker');
+const hoursPicker = document.getElementById("hoursPicker");
+const minutesPicker = document.getElementById("minutesPicker");
 
-function buildPicker(picker, range){
-  picker.innerHTML = '';
-  const list = document.createElement('div');
-  list.className = 'picker-list';
-  picker.appendChild(list);
+function buildPicker(picker, range) {
+    picker.innerHTML = "";
+    const list = document.createElement("div");
+    list.className = "picker-list";
+    picker.appendChild(list);
 
-  for (let i = 0; i < range; i++){
-    const item = document.createElement('div');
-    item.className = 'picker-item';
-    item.textContent = i.toString().padStart(2,'0');
-    list.appendChild(item);
-  }
+    for (let i = 0; i < range; i++) {
+        const item = document.createElement("div");
+        item.className = "picker-item";
+        item.textContent = i.toString().padStart(2, "0");
+        list.appendChild(item);
+    }
 
-  const highlight = document.createElement('div');
-  highlight.className = 'highlight-bar';
-  picker.appendChild(highlight);
+    const highlight = document.createElement("div");
+    highlight.className = "highlight-bar";
+    picker.appendChild(highlight);
 }
 
-function updatePicker(picker, index){
-  const list = picker.querySelector('.picker-list');
-  const center = picker.offsetHeight/2 - 20;
-  list.style.top = center - index*40 + 'px';
+function updatePicker(picker, index) {
+    const list = picker.querySelector(".picker-list");
+    const center = picker.offsetHeight / 2 - 20;
+    list.style.top = center - index * 40 + "px";
 
-  picker.querySelectorAll('.picker-item').forEach((item,i)=> {
-    item.classList.toggle('selected', i === index);
-  });
+    picker.querySelectorAll(".picker-item").forEach((item, i) => {
+        item.classList.toggle("selected", i === index);
+    });
 }
 
-function addPickerDrag(picker, maxRange, setValue){
-  let dragging = false, startY = 0, startTop = 0;
-  const list = picker.querySelector('.picker-list');
+function addPickerDrag(picker, maxRange, setValue) {
+    let dragging = false,
+        startY = 0,
+        startTop = 0;
 
-  function move(y){
-    let delta = y - startY;
-    let newTop = startTop + delta;
+    const list = picker.querySelector(".picker-list");
 
-    const maxTop = picker.offsetHeight/2 - 20;
-    const minTop = -(maxRange-1)*40 + picker.offsetHeight/2 - 20;
+    function move(y) {
+        let delta = y - startY;
+        let newTop = startTop + delta;
 
-    if (newTop > maxTop) newTop = maxTop;
-    if (newTop < minTop) newTop = minTop;
+        const maxTop = picker.offsetHeight / 2 - 20;
+        const minTop = -(maxRange - 1) * 40 + picker.offsetHeight / 2 - 20;
 
-    list.style.top = newTop + 'px';
+        if (newTop > maxTop) newTop = maxTop;
+        if (newTop < minTop) newTop = minTop;
 
-    let index = Math.round((picker.offsetHeight/2 - 20 - newTop) / 40);
-    index = Math.max(0, Math.min(maxRange-1, index));
+        list.style.top = newTop + "px";
 
-    setValue(index);
-    updatePicker(picker, index);
+        let index = Math.round((picker.offsetHeight / 2 - 20 - newTop) / 40);
+        index = Math.max(0, Math.min(maxRange - 1, index));
 
-    totalTime = selectedHour*3600 + selectedMinute*60;
-    updateUI();
-  }
+        setValue(index);
+        updatePicker(picker, index);
 
-  function down(e){
-    dragging = true;
-    startY = e.clientY || e.touches[0].clientY;
-    startTop = parseFloat(list.style.top) || 0;
-    e.preventDefault();
-  }
+        totalTime = selectedHour * 3600 + selectedMinute * 60;
+        updateUI();
+    }
 
-  function moveEvent(e){ if (dragging) move(e.clientY || e.touches[0].clientY); }
-  function up(){ dragging = false; }
+    function down(e) {
+        dragging = true;
+        startY = e.clientY || e.touches[0].clientY;
+        startTop = parseFloat(list.style.top) || 0;
+        e.preventDefault();
+    }
 
-  picker.addEventListener('mousedown', down);
-  picker.addEventListener('touchstart', down, { passive:false });
-  window.addEventListener('mousemove', moveEvent);
-  window.addEventListener('touchmove', moveEvent, { passive:false });
-  window.addEventListener('mouseup', up);
-  window.addEventListener('touchend', up);
+    function moveEvent(e) {
+        if (dragging) move(e.clientY || e.touches[0].clientY);
+    }
+
+    function up() {
+        dragging = false;
+    }
+
+    picker.addEventListener("mousedown", down);
+    picker.addEventListener("touchstart", down, { passive: false });
+    window.addEventListener("mousemove", moveEvent);
+    window.addEventListener("touchmove", moveEvent, { passive: false });
+    window.addEventListener("mouseup", up);
+    window.addEventListener("touchend", up);
 }
 
+// Luo pickerit
 buildPicker(hoursPicker, 13);
 buildPicker(minutesPicker, 60);
 
-window.addEventListener("load", () => {
-    updatePicker(hoursPicker, selectedHour);
-    updatePicker(minutesPicker, selectedMinute);
-});
+updatePicker(hoursPicker, selectedHour);
+updatePicker(minutesPicker, selectedMinute);
 
-addPickerDrag(hoursPicker, 13, i => selectedHour = i);
-addPickerDrag(minutesPicker, 60, i => selectedMinute = i);
+addPickerDrag(hoursPicker, 13, (i) => (selectedHour = i));
+addPickerDrag(minutesPicker, 60, (i) => (selectedMinute = i));
 
 updateUI();
 
@@ -414,4 +436,3 @@ updateUI();
 
 </body>
 </html>
-
